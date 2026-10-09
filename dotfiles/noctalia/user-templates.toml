@@ -1,0 +1,10 @@
+
+[templates.p10ktemplate]
+input_path = "~/.config/noctalia/templates/p10ktemplate.zsh"
+output_path = "~/.p10k.zsh"
+post_hook = "p10reload.sh"
+
+# [templates.snappytemplate]
+# input_path = "~/.config/noctalia/templates/snappytemplate.ini"
+# output_path = "~/.config/snappy-switcher/themes/noctalia.ini"
+# post_hook = "snappyreload.sh"

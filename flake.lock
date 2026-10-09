@@ -1,0 +1,188 @@
+{
+  "nodes": {
+    "anthropic-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791208002,
+        "narHash": "sha256-APw+xMKqRvkLnuQxttiyyIeylrIMSxZovQnw3xEl1C4=",
+        "owner": "anthropics",
+        "repo": "skills",
+        "rev": "683bc88e56f3e09ba94f7055977f3d3aa499f202",
+        "type": "github"
+      },
+      "original": {
+        "owner": "anthropics",
+        "repo": "skills",
+        "type": "github"
+      }
+    },
+    "apple-design-skill": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1790971407,
+        "narHash": "sha256-iLNZsGRXV/Y2JYmtvvlavS3cuFwzQ0j5qRJck3pvAcY=",
+        "owner": "dickwu",
+        "repo": "apple-design-skill",
+        "rev": "904b0eedc7cc778152f545506075d5bb5219ce77",
+        "type": "github"
+      },
+      "original": {
+        "owner": "dickwu",
+        "repo": "apple-design-skill",
+        "type": "github"
+      }
+    },
+    "awesome-llm-observability": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791204825,
+        "narHash": "sha256-aktI/bHqG3q8fJv+tBakY+kvmurQ9DyTSRswcmSZvUI=",
+        "owner": "ContextJet-ai",
+        "repo": "awesome-llm-observability",
+        "rev": "d6e0ff7e5e63febccb3d085681df934b59653864",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ContextJet-ai",
+        "repo": "awesome-llm-observability",
+        "type": "github"
+      }
+    },
+    "caveman": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791438150,
+        "narHash": "sha256-przOot/S0VLw2aP3tOdxF27mZHMp0NQhyTls0eDAjjs=",
+        "owner": "JuliusBrussee",
+        "repo": "caveman",
+        "rev": "2e08b9177c07bb7249a8a2d1a6758e5db281d002",
+        "type": "github"
+      },
+      "original": {
+        "owner": "JuliusBrussee",
+        "repo": "caveman",
+        "type": "github"
+      }
+    },
+    "e2e-agent-skills": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1782244227,
+        "narHash": "sha256-rFBTsqpIFK17zpbPvzINP3aPyboWBI3N4YErVix+RB8=",
+        "owner": "jmr85",
+        "repo": "e2e-agent-skills",
+        "rev": "912b12e31dd899a36c1bd272ada8c6a1c964926d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "jmr85",
+        "repo": "e2e-agent-skills",
+        "type": "github"
+      }
+    },
+    "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791484883,
+        "narHash": "sha256-iKxFHJrg7Sltwhq3ssCZYQ4CFEDVvReVVuVuO9dj3sE=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "dfadbe5162d5e86bc0808badec8f346f81b4b3f0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1791456040,
+        "narHash": "sha256-H83yz/do+hjOO0uujHyH8RgtIQP2v7Mw+cLwcZK/xKc=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e7439b6b14ad3cc35d05608ebca9bce01a25f5f8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "noctalia": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791515269,
+        "narHash": "sha256-UdDeKbXyv2CAfB0VaD+Xb2r+kzdedwoh8ZR3zQtucjo=",
+        "owner": "noctalia-dev",
+        "repo": "noctalia-shell",
+        "rev": "da175871820e38446195f0b25c34f3d41f1e862e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "noctalia-shell",
+        "type": "github"
+      }
+    },
+    "noctalia-community-plugins": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791497964,
+        "narHash": "sha256-uwigD+0j2HCo2YmC768UbNn4DRz2YVxBNLda7tHvmRg=",
+        "owner": "noctalia-dev",
+        "repo": "community-plugins",
+        "rev": "f5434f5aa88474cd347786a9d4c06e9041ba8084",
+        "type": "github"
+      },
+      "original": {
+        "owner": "noctalia-dev",
+        "repo": "community-plugins",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "anthropic-skills": "anthropic-skills",
+        "apple-design-skill": "apple-design-skill",
+        "awesome-llm-observability": "awesome-llm-observability",
+        "caveman": "caveman",
+        "e2e-agent-skills": "e2e-agent-skills",
+        "home-manager": "home-manager",
+        "nixpkgs": "nixpkgs",
+        "noctalia": "noctalia",
+        "noctalia-community-plugins": "noctalia-community-plugins",
+        "vibium": "vibium"
+      }
+    },
+    "vibium": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1791490577,
+        "narHash": "sha256-3fro9wKnZat0TS/jfICul1hz0rfniIH0MVRekztJk2o=",
+        "owner": "VibiumDev",
+        "repo": "vibium",
+        "rev": "e4aa75ec653b30b699c603485fe990aa593beac9",
+        "type": "github"
+      },
+      "original": {
+        "owner": "VibiumDev",
+        "repo": "vibium",
+        "type": "github"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}

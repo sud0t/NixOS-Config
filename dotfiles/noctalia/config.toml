@@ -1,0 +1,4 @@
+[theme.templates.user.p10k]
+input_path = "~/.config/noctalia/templates/p10ktemplate.zsh"
+output_path = "~/.p10k.zsh"
+post_hook = "p10reload.sh"

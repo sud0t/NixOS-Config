@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Claude Code status line (~/.claude/settings.json -> statusLine.command, installed by home/claude.nix).
+# Reads the session JSON Claude Code passes on stdin and prints one line:
+#   model · context window used (bar, %, tokens) · 5-hour window used % + reset · 7-day window used % + reset
+# Glyphs are Nerd Font (Hack Nerd Font in kitty). Rate-limit fields exist only for claude.ai Pro/Max
+# sessions and only after the first response; they are shown as "—" until then.
+
+input=$(cat)
+j() { jq -r "$1" <<<"$input"; }
+
+reset=$'\033[0m'
+dim=$'\033[2m'
+bold=$'\033[1m'
+
+# colour for a percentage: green < 50, yellow < 80, red otherwise
+tone() {
+  local p=${1%.*}
+  if [ "${p:-0}" -ge 80 ]; then printf '\033[31m'
+  elif [ "${p:-0}" -ge 50 ]; then printf '\033[33m'
+  else printf '\033[32m'; fi
+}
+
+# epoch -> "HH:MM (1h23m)" today, or "Mon HH:MM (2d 3h)" on another day
+fmt_reset() {
+  local at=$1 now diff when d h m left
+  now=$(date +%s)
+  diff=$((at - now)); [ "$diff" -lt 0 ] && diff=0
+  if [ "$(date -d "@$at" +%F)" = "$(date +%F)" ]; then
+    when=$(date -d "@$at" +%H:%M)
+  else
+    when=$(date -d "@$at" +'%a %H:%M')
+  fi
+  d=$((diff / 86400)); h=$((diff % 86400 / 3600)); m=$((diff % 3600 / 60))
+  if [ "$d" -gt 0 ]; then left="${d}d${h}h"
+  elif [ "$h" -gt 0 ]; then left="${h}h${m}m"
+  else left="${m}m"; fi
+  printf '%s %s(%s)%s' "$when" "$dim" "$left" "$reset"
+}
+
+# "5h 23% ↻ 14:30 (2h13m)" or "5h —" when the window is not reported
+window() {
+  local label=$1 key=$2 pct at
+  pct=$(j ".rate_limits.${key}.used_percentage // empty")
+  at=$(j ".rate_limits.${key}.resets_at // empty")
+  if [ -z "$pct" ]; then
+    printf '%s %s—%s' "$label" "$dim" "$reset"
+    return
+  fi
+  printf '%s %s%d%%%s' "$label" "$(tone "$pct")" "${pct%.*}" "$reset"
+  [ -n "$at" ] && printf ' ↻ %s' "$(fmt_reset "$at")"
+}
+
+# --- model ------------------------------------------------------------------------------------------
+model=$(j '.model.display_name // "Claude"')
+
+# --- context window ---------------------------------------------------------------------------------
+# used_percentage is null before the first response and right after /compact: fall back to the
+# input-only sum Claude Code itself uses (input + cache creation + cache read), or 0
+ctx_size=$(j '.context_window.context_window_size // 200000')
+ctx_used=$(j '(.context_window.current_usage // {}) | ((.input_tokens // 0) + (.cache_creation_input_tokens // 0) + (.cache_read_input_tokens // 0))')
+ctx_pct=$(j ".context_window.used_percentage // ($ctx_used * 100 / $ctx_size) | floor")
+filled=$((ctx_pct / 10)); [ "$filled" -gt 10 ] && filled=10
+bar=""
+for ((i = 0; i < 10; i++)); do
+  if [ "$i" -lt "$filled" ]; then bar+="█"; else bar+="░"; fi
+done
+ctx_tone=$(tone "$ctx_pct")
+ctx="󰍛 ${ctx_tone}${bar} ${ctx_pct}%${reset} ${dim}$((ctx_used / 1000))k/$((ctx_size / 1000))k${reset}"
+
+# --- rate limits ------------------------------------------------------------------------------------
+session=$(window " 5h" five_hour)
+weekly=$(window " 7d" seven_day)
+
+printf '%s󰚩 %s%s %s│%s %s %s│%s %s %s│%s %s\n' \
+  "$bold" "$model" "$reset" "$dim" "$reset" "$ctx" "$dim" "$reset" "$session" "$dim" "$reset" "$weekly"

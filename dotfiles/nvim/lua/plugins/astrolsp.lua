@@ -1,0 +1,117 @@
+-- AstroLSP allows you to customize the features in AstroNvim's LSP configuration engine
+-- Configuration documentation can be found with `:h astrolsp`
+---@type LazySpec
+return {
+  "AstroNvim/astrolsp",
+  ---@type AstroLSPOpts
+  opts = {
+    -- Configuration table of features provided by AstroLSP
+    diagnostics = {
+      update_in_insert = false,
+    },
+    features = {
+      codelens = true, -- enable/disable codelens refresh on start
+      inlay_hints = false, -- enable/disable inlay hints on start
+      semantic_tokens = true, -- enable/disable semantic token highlighting
+    },
+    -- customize lsp formatting options
+    formatting = {
+      -- control auto formatting on save
+      format_on_save = {
+        enabled = false, -- enable or disable format on save globally
+        allow_filetypes = { -- enable format on save for specified filetypes only
+          -- "go",
+        },
+        ignore_filetypes = { -- disable format on save for specified filetypes
+          -- "python",
+        },
+      },
+      disabled = { -- disable formatting capabilities for the listed language servers
+      },
+      timeout_ms = 1000, -- default format timeout
+      -- filter = function(client) -- fully override the default formatting function
+      --   return true
+      -- end
+    },
+    -- enable servers that you already have installed without mason
+    servers = {},
+    -- customize language server configuration passed to `vim.lsp.config`
+    -- client specific configuration can also go in `lsp/` in your configuration root (see `:h lsp-config`)
+    config = {
+      -- ["*"] = { capabilities = {} }, -- modify default LSP client settings such as capabilities
+      -- ruff logs its routine INFO/WARN messages to stderr, which ends up in lsp.log as errors
+      ruff = { init_options = { settings = { logLevel = "error" } } },
+    },
+    -- customize how language servers are attached
+    handlers = {
+      -- a function with the key `*` modifies the default handler, functions takes the server name as the parameter
+      -- ["*"] = function(server) vim.lsp.enable(server) end
+
+      -- the key is the server that is being setup with `vim.lsp.config`
+      -- rust_analyzer = false, -- setting a handler to false will disable the set up of that language server
+
+      -- mason-lspconfig starts every installed server, and the stylua package also ships a language server
+      -- mode; the lua pack already formats with stylua through none-ls, so this would format Lua twice
+      stylua = false,
+    },
+    -- Configure buffer local auto commands to add when attaching a language server
+    autocmds = {
+      -- first key is the `augroup` to add the auto commands to (:h augroup)
+      lsp_codelens_refresh = {
+        -- Optional condition to create/delete auto command group
+        -- can either be a string of a client capability or a function of `fun(client, bufnr): boolean`
+        -- condition will be resolved for each client on each execution and if it ever fails for all clients,
+        -- the auto commands will be deleted for that buffer
+        cond = "textDocument/codeLens",
+        -- cond = function(client, bufnr) return client.name == "lua_ls" end,
+        -- list of auto commands to set
+        {
+          -- events to trigger
+          event = { "InsertLeave", "BufEnter" },
+          -- the rest of the autocmd options (:h nvim_create_autocmd)
+          desc = "Refresh codelens (buffer)",
+          callback = function(args)
+            if require("astrolsp").config.features.codelens then vim.lsp.codelens.enable(true, { bufnr = args.buf }) end
+          end,
+        },
+      },
+      -- ghost text with the parameters (and defaults) still missing from the call under the cursor
+      signature_ghost = {
+        cond = "textDocument/signatureHelp",
+        {
+          event = { "CursorMovedI", "TextChangedI" },
+          desc = "Update signature ghost text",
+          callback = function(args) require("user.signature_ghost").schedule(args.buf) end,
+        },
+        {
+          event = { "InsertLeave", "BufLeave" },
+          desc = "Clear signature ghost text",
+          callback = function(args) require("user.signature_ghost").clear(args.buf) end,
+        },
+      },
+    },
+    -- mappings to be set up on attaching of a language server
+    mappings = {
+      n = {
+        ["<Leader>uG"] = {
+          function() require("user.signature_ghost").toggle() end,
+          desc = "Toggle signature ghost text",
+          cond = "textDocument/signatureHelp",
+        },
+      },
+      i = {
+        ["<M-s>"] = {
+          function() require("user.signature_ghost").accept() end,
+          desc = "Insert signature ghost text / next placeholder",
+          cond = "textDocument/signatureHelp",
+        },
+      },
+    },
+    -- A custom `on_attach` function to be run after the default `on_attach` function
+    -- takes two parameters `client` and `bufnr`  (`:h lsp-attach`)
+    -- on_attach = function(client, bufnr)
+    -- this would disable semanticTokensProvider for all clients
+    -- client.server_capabilities.semanticTokensProvider = nil
+    -- end,
+  },
+}

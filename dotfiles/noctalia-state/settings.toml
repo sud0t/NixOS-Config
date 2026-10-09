@@ -1,0 +1,313 @@
+config_version = 14
+
+[bar.default]
+background_opacity = 0.92999997921288013
+end = [ "group:g4", "group:g3", "group:g2", "group:g1" ]
+font_scale = 1.0799999833106995
+margin_ends = 1
+start = [ "launcher", "workspaces", "group:g5" ]
+thickness = 27
+
+    [bar.default.monitor.eDP-1]
+    font_scale = 1.0099999848753214
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface_variant"
+    id = "g1"
+    members = [ "clipboard", "notifications", "wallpaper", "control-center", "session" ]
+    opacity = 1.0
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface_variant"
+    id = "g2"
+    members = [ "brightness", "volume", "battery" ]
+    opacity = 1.0
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface_variant"
+    id = "g3"
+    members = [ "bluetooth", "network" ]
+    opacity = 1.0
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface_variant"
+    id = "g4"
+    members = [ "nix-monitor", "tray" ]
+    opacity = 1.0
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    enabled = true
+    fill = "surface_variant"
+    id = "g5"
+    members = [ "temp", "cpu", "ram" ]
+    opacity = 1.0
+    padding = 6.0
+
+[calendar]
+enabled = true
+
+    [calendar.account.personal_google]
+    name = "Google Calendar"
+    type = "google"
+
+[desktop_widgets]
+enabled = false
+
+[keybinds]
+down = [ "Down", "Ctrl+j" ]
+left = [ "Left", "Ctrl+h" ]
+right = [ "Right", "Ctrl+l" ]
+up = [ "Up", "Ctrl+k" ]
+
+[location]
+auto_locate = true
+
+[lockscreen_widgets]
+enabled = false
+schema_version = 2
+widget_order = [ "lockscreen-login-box@eDP-1", "lockscreen-login-box@HDMI-A-1" ]
+
+    [lockscreen_widgets.grid]
+    cell_size = 16
+    major_interval = 4
+    visible = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-1"]
+    box_height = 196.0
+    box_width = 810.0
+    cx = 960.0
+    cy = 898.0
+    output = "HDMI-A-1"
+    placement_height = 1080.0
+    placement_width = 1920.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@HDMI-A-1".settings]
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+    [lockscreen_widgets.widget."lockscreen-login-box@eDP-1"]
+    box_height = 196.0
+    box_width = 810.0
+    cx = 640.0
+    cy = 538.0
+    output = "eDP-1"
+    placement_height = 720.0
+    placement_width = 1280.0
+    rotation = 0.0
+    type = "login_box"
+
+        [lockscreen_widgets.widget."lockscreen-login-box@eDP-1".settings]
+        background_color = "surface_variant"
+        background_opacity = 0.88
+        background_radius = 12.0
+        center_password_text = false
+        input_opacity = 1.0
+        input_radius = 6.0
+        layout = "regular"
+        show_caps_lock = true
+        show_keyboard_layout = true
+        show_login_button = true
+        show_media = true
+        show_session_buttons = true
+        show_unlock_hint = true
+        show_weather = true
+
+[nightlight]
+enabled = true
+
+[notification]
+history_retention_hours = 120
+
+[plugin_settings."avivbintangaringga/nix-monitor"]
+branch = "nixos-unstable"
+update_command = "nixos-update"
+
+[plugins]
+auto_update = "none"
+enabled = [ "avivbintangaringga/nix-monitor" ]
+
+[shell.launcher]
+app_grid = true
+pinned = [ ]
+
+[shell.panel]
+control_center_placement = "floating"
+control_center_position = "top_right"
+launcher_position = "top_left"
+open_near_click_launcher = true
+session_placement = "floating"
+
+[system.monitor]
+cpu_temp_activity_threshold = 80
+cpu_temp_critical_threshold = 95
+
+[theme]
+builtin = "Ayu"
+community_palette = "Oxocarbon"
+mode = "dark"
+source = "wallpaper"
+wallpaper_scheme = "m3-content"
+
+    [theme.templates]
+    builtin_ids = [ "gtk3", "gtk4", "hyprland", "kitty", "qt" ]
+
+[wallpaper]
+directory = "@home@/Pictures/Wallpapers"
+directory_dark = "@home@/Pictures/Wallpapers"
+transition_on_startup = true
+
+    [wallpaper.default]
+    path = "@home@/Pictures/Wallpapers/dopesmoker_gruvbox.png"
+
+    [wallpaper.last]
+    path = "@home@/Pictures/Wallpapers/dopesmoker_gruvbox.png"
+
+    [wallpaper.monitors.HDMI-A-1]
+    path = "@home@/Pictures/Wallpapers/dopesmoker_gruvbox.png"
+
+    [wallpaper.monitors.eDP-1]
+    path = "@home@/Pictures/Wallpapers/dopesmoker_gruvbox.png"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/dopesmoker_gruvbox.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/Doodle_Space_Nord.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/em-rofi.webp"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/futuristicAncientTree.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    path = "@home@/Pictures/Wallpapers/gruvbox_retrocity.png"
+    theme_mode = "auto"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/anime_cafe_tokyonight.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/australia.jpg"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-rainbow"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/astronaut-nord.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/hill-house.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/Nepal_5160x2160.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/ocean_with_cloud.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/train_and_lake.png"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+    [[wallpaper.favorite]]
+    palette_source = "wallpaper"
+    path = "@home@/Pictures/Wallpapers/trad-waves.webp"
+    theme_mode = "dark"
+    wallpaper_scheme = "m3-content"
+
+[widget.battery]
+hide_when_full = true
+
+[widget.brightness]
+show_label = false
+
+[widget.clock]
+format = "{:%I:%M}"
+
+[widget.control-center]
+glyph = "adjustments"
+
+[widget.cpu]
+show_value = false
+
+[widget.launcher]
+glyph = "grid-dots"
+
+[widget.network]
+show_label = false
+
+[widget.nix-monitor]
+type = "avivbintangaringga/nix-monitor:nix-monitor"
+
+[widget.ram]
+show_value = false
+
+[widget.temp]
+show_value = false
+
+[widget.volume]
+show_label = false
+
+[widget.workspaces]
+label_source = "name"

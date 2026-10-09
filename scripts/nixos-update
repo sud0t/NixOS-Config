@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Update the flake inputs of ~/nixos-config and rebuild the system (the flake output is named after the
+# hostname). Runs in a terminal; waits for a key press before closing so the output can be read.
+
+FLAKE="${NIXOS_FLAKE:-$HOME/nixos-config}"
+HOST="${NIXOS_HOST:-$(cat /proc/sys/kernel/hostname)}"
+
+echo "Updating flake inputs in $FLAKE..."
+nix flake update --flake "$FLAKE" || { read -n 1 -r -p "flake update failed. Press any key to exit..."; exit 1; }
+
+echo "Rebuilding system ($HOST)..."
+# build as the user, sudo only for the activation (nixos-rebuild-ng); older nixos-rebuild runs under sudo
+if nixos-rebuild --help 2>&1 | grep -q -- '--sudo'; then
+  nixos-rebuild switch --sudo --flake "$FLAKE#$HOST"
+else
+  sudo nixos-rebuild switch --flake "$FLAKE#$HOST"
+fi
+status=$?
+
+read -n 1 -r -p "Press any key to exit..."
+exit $status
