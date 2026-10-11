@@ -37,7 +37,7 @@
     prettier
     eslint
 
-    # Rust: rustup manages the toolchains (install.sh runs `rustup default stable` and adds rust-analyzer);
+    # Rust: rustup manages the toolchains (nixos-first-boot runs `rustup default stable` and adds rust-analyzer);
     # rust.lua asks `rustup which rust-analyzer`. pkg-config for crates that link system libraries.
     rustup
     pkg-config

@@ -1,0 +1,161 @@
+#!/usr/bin/env bash
+# One-time user setup after a fresh install, for the things that cannot be declared in Nix: zinit plugins,
+# Neovim plugins + Mason tools, the rustup toolchain, the vibium CLI (npm) and the nix-index database.
+#
+# Started on every boot by the nixos-first-boot system service (modules/nixos/first-boot.nix), as the user,
+# until every step has succeeded once; it waits for the network and retries failed steps. Safe to run by
+# hand (`nixos-first-boot`); `nixos-first-boot --again` forgets which steps already ran and redoes them all.
+# Progress: journalctl -u nixos-first-boot
+
+set -uo pipefail
+
+BASE="${XDG_STATE_HOME:-$HOME/.local/state}/nixos-config"
+STATE="$BASE/first-boot" # one marker file per finished step
+DONE="$BASE/first-boot.done" # the service's ConditionPathExists
+MAX_ATTEMPTS=5
+
+[ "${1:-}" = "--again" ] && rm -rf "$STATE" "$DONE" "$BASE/lazy-lock.json.orig"
+mkdir -p "$STATE"
+
+# the user's Home Manager profile and the system profile (a system service starts with a minimal PATH)
+export PATH="/etc/profiles/per-user/$USER/bin:/run/current-system/sw/bin:/run/wrappers/bin:$PATH"
+export NPM_CONFIG_PREFIX="$HOME/.local"
+
+# no network yet (e.g. Wi-Fi not connected): exit non-zero, the service retries in a couple of minutes
+if ! curl -fsS --max-time 15 -o /dev/null https://github.com; then
+  echo "no network yet; trying again later"
+  exit 75
+fi
+
+failed=0
+step() {
+  local name="$1"
+  shift
+  [ -e "$STATE/$name" ] && return 0
+  echo "==> $name"
+  if "$@"; then
+    touch "$STATE/$name"
+    echo "    done"
+  else
+    echo "    $name failed (retried on the next run)"
+    failed=1
+  fi
+}
+
+# zsh: zinit clones its plugins and OMZ snippets on the first interactive start
+zinit_plugins() { zsh -i -c 'exit' </dev/null >/dev/null 2>&1; [ -d "$HOME/.local/share/zinit" ]; }
+
+# Neovim: lazy.nvim plugins at the versions pinned in lazy-lock.json (restore, not sync: sync would update them
+# and rewrite the lock file), then the Mason packages from nvim/lua/plugins/mason.lua.
+# `nvim --headless` exits 0 even when a plugin fails, so errors are read from its output (full log in
+# $BASE/nvim.log). A clone cut short by a reboot leaves a plugin directory without a valid HEAD, which
+# lazy.nvim trips over on every later start: those are removed so they get cloned again.
+LAZY="$HOME/.local/share/nvim/lazy"
+prune_broken_plugins() {
+  local d
+  command -v git >/dev/null || return 0
+  for d in "$LAZY"/*/; do
+    [ -d "$d" ] || continue
+    git -C "$d" rev-parse -q --verify HEAD >/dev/null 2>&1 || { echo "    removing broken plugin clone ${d%/}"; rm -rf "$d"; }
+  done
+}
+# lazy.nvim rewrites lazy-lock.json (in the repository, through the ~/.config/nvim link) from whatever is
+# installed, so a failed or interrupted install would drop entries from it: keep the repository's version
+LOCK="$HOME/.config/nvim/lazy-lock.json"
+LOCK_SAVED="$BASE/lazy-lock.json.orig"
+nvim_headless() {
+  local rc=0
+  prune_broken_plugins
+  [ -f "$LOCK_SAVED" ] || [ ! -f "$LOCK" ] || cp "$LOCK" "$LOCK_SAVED"
+  # never let a stuck nvim hold up the remaining steps; the step is retried on the next run
+  timeout --kill-after=30s 20m nvim --headless "$@" +qa </dev/null >"$BASE/nvim.log" 2>&1 || rc=$?
+  [ "$rc" = 124 ] && echo "    nvim did not exit within 20 minutes; stopped it"
+  [ -f "$LOCK_SAVED" ] && ! cmp -s "$LOCK_SAVED" "$LOCK" && cp "$LOCK_SAVED" "$LOCK"
+  if grep -qE '^E[0-9]+:|Error executing|assertion failed' "$BASE/nvim.log"; then
+    grep -E '^E[0-9]+:|Error executing|assertion failed' "$BASE/nvim.log" | head -5 | sed 's/^/    /'
+    rc=1
+  fi
+  return "$rc"
+}
+nvim_plugins() { nvim_headless "+Lazy! restore"; }
+mason_tools() {
+  cat >"$BASE/mason-install.lua" <<'LUA'
+-- MasonToolsInstallSync never returns on a fresh system (it races AstroNvim's own mason-lspconfig /
+-- mason-null-ls / mason-nvim-dap installs). Start the async install instead and wait on the registry
+-- until every ensure_installed tool is in place and nothing is installing; exit 1 if that does not happen.
+local spec = require("lazy.core.config").plugins["mason-tool-installer.nvim"]
+local opts = spec and require("lazy.core.plugin").values(spec, "opts", false) or {}
+local wanted = {}
+for _, item in ipairs(opts.ensure_installed or {}) do
+  table.insert(wanted, type(item) == "table" and item[1] or item)
+end
+vim.cmd("MasonToolsInstall")
+local registry = require("mason-registry")
+local function busy()
+  for _, p in ipairs(registry.get_all_packages()) do
+    if p:is_installing() then return true end
+  end
+  return false
+end
+local function missing()
+  local out = {}
+  for _, name in ipairs(wanted) do
+    if not registry.is_installed(name) then table.insert(out, name) end
+  end
+  return out
+end
+local idle_since = nil
+local ok = vim.wait(18 * 60 * 1000, function()
+  if busy() then idle_since = nil return false end
+  if #missing() == 0 then return true end
+  idle_since = idle_since or vim.uv.now()
+  return vim.uv.now() - idle_since > 120000 -- nothing installing for 2 min, still missing: give up
+end, 1000)
+local left = missing()
+if ok and #left == 0 then
+  io.stdout:write(("mason: %d tools installed\n"):format(#wanted))
+  vim.cmd("qa!")
+else
+  io.stdout:write("E999: mason tools missing: " .. table.concat(left, ", ") .. "\n")
+  vim.cmd("cquit 1")
+end
+LUA
+  nvim_headless "+luafile $BASE/mason-install.lua"
+}
+
+# Rust: rust.lua asks rustup for rust-analyzer
+rust_toolchain() {
+  rustup show active-toolchain >/dev/null 2>&1 || rustup default stable || return 1
+  rustup component add rust-analyzer
+}
+
+# npm globals (prefix ~/.local, see home/dev.nix): the vibium CLI for the Claude Code browser/check skills
+vibium_cli() { [ -x "$HOME/.local/bin/vibium" ] || npm install -g vibium; }
+
+# command-not-found database for the shell (programs.nix-index); takes several minutes
+nix_index() { nix-index; }
+
+mkdir -p "$HOME/Pictures/Screenshots" # hyprshot's save directory
+step zinit-plugins zinit_plugins
+step nvim-plugins nvim_plugins
+step mason-tools mason_tools
+step rust-toolchain rust_toolchain
+step vibium-cli vibium_cli
+step nix-index nix_index
+
+if [ "$failed" = 0 ]; then
+  rm -f "$LOCK_SAVED" # taken again on the next run, so later edits to the lock file are kept
+  touch "$DONE"
+  echo "first-boot setup complete"
+  exit 0
+fi
+
+attempts=$(($(cat "$STATE/attempts" 2>/dev/null || echo 0) + 1))
+echo "$attempts" >"$STATE/attempts"
+if [ "$attempts" -ge "$MAX_ATTEMPTS" ]; then
+  rm -f "$LOCK_SAVED"
+  touch "$DONE"
+  echo "giving up after $attempts attempts; run nixos-first-boot by hand to retry the failed steps"
+  exit 0
+fi
+exit 1

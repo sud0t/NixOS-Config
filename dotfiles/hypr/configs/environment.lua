@@ -23,7 +23,9 @@ hl.env("CLUTTER_BACKEND", "wayland")
 -- hl.env("LIBVA_DRIVER_NAME", "nvidia")
 -- hl.env("__GLX_VENDOR_LIBRARY_NAME", "nvidia")
 
-hl.env("AQ_DRM_DEVICES", "/dev/dri/card0:/dev/dri/card1")
+-- Intel iGPU first (it drives the panel), then the nvidia dGPU. igpu/dgpu are udev symlinks by PCI address
+-- (modules/nixos/nvidia.nix); card0/card1 swap depending on which driver loads first.
+hl.env("AQ_DRM_DEVICES", "/dev/dri/igpu:/dev/dri/dgpu")
 
 hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("WINIT_UNIX_BACKEND", "x11")

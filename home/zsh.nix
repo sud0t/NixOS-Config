@@ -38,7 +38,7 @@
   };
 
   # command-not-found handler for a flake-based system (the OMZ command-not-found snippet in the .zshrc
-  # finds no distro handler on NixOS). Run `nix-index` once to build the database.
+  # finds no distro handler on NixOS). nixos-first-boot builds the database once; `nix-index` refreshes it.
   programs.nix-index = {
     enable = true;
     enableZshIntegration = true;

@@ -1,6 +1,6 @@
 # Hybrid graphics: Intel UHD 630 (00:02.0) drives the displays, Quadro T1000 (01:00.0) is available for
-# offload and Ollama. hypr/configs/environment.lua hands both cards to Hyprland
-# (AQ_DRM_DEVICES=/dev/dri/card0:/dev/dri/card1).
+# offload and Ollama. hypr/configs/environment.lua hands both cards to Hyprland, Intel first
+# (AQ_DRM_DEVICES=/dev/dri/igpu:/dev/dri/dgpu, the stable names created below).
 {
   config,
   pkgs,
@@ -22,6 +22,14 @@
   environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
 
   services.xserver.videoDrivers = [ "nvidia" ];
+
+  # card0/card1 are numbered in driver load order, which differs between boots and systems (on this laptop
+  # Artix gets the nvidia card as card0). Fixed names by PCI address instead; AQ_DRM_DEVICES is
+  # colon-separated, so the /dev/dri/by-path names (which contain colons) cannot be used there.
+  services.udev.extraRules = ''
+    SUBSYSTEM=="drm", KERNEL=="card[0-9]*", KERNELS=="0000:00:02.0", SYMLINK+="dri/igpu"
+    SUBSYSTEM=="drm", KERNEL=="card[0-9]*", KERNELS=="0000:01:00.0", SYMLINK+="dri/dgpu"
+  '';
 
   hardware.nvidia = {
     modesetting.enable = true;

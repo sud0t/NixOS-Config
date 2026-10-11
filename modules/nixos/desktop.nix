@@ -20,8 +20,17 @@
     extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   };
 
-  # Login: greetd running the Noctalia greeter on VT 1 (greetd's default)
-  services.displayManager.noctalia-greeter.enable = true;
+  # Login: greetd running the Noctalia greeter on VT 1 (greetd's default). The Hyprland package also ships a
+  # "Hyprland (uwsm-managed)" session, which the greeter would otherwise preselect; this configuration does
+  # not use UWSM (programs.hyprland.withUWSM is off, autostart.lua starts hyprland-session.target itself),
+  # so plain "Hyprland" is the default. The greeter still remembers whatever is picked later.
+  services.displayManager.noctalia-greeter = {
+    enable = true;
+    extraArgs = [
+      "--session"
+      "Hyprland"
+    ];
+  };
 
   # Audio: PipeWire with WirePlumber as the session manager. Everything runs as socket-activated systemd
   # user units from login, so sound works before Hyprland is up and survives a compositor restart.

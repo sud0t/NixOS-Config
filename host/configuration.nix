@@ -1,5 +1,6 @@
-# System configuration (Dell laptop: i7-9850H, UHD 630 + Quadro T1000, AX200 Wi-Fi).
-# The per-user configuration lives in ../home. User and host names come from ../vars.nix.
+# System configuration (ThinkPad P53: i7-9850H, UHD 630 + Quadro T1000, AX200 Wi-Fi).
+# The per-user configuration lives in ../home. User and host names come from ../vars.nix, the disks from
+# ./disks.nix.
 {
   config,
   pkgs,
@@ -9,12 +10,25 @@
   ...
 }:
 
+let
+  disks = import ./disks.nix;
+
+  # keeps a single "NixOS" entry in the UEFI boot menu (see the script); run after every GRUB install
+  efiEntries = pkgs.writeScript "nixos-efi-entries" (builtins.readFile ../scripts/nixos-efi-entries);
+  efiEntriesPath = lib.makeBinPath [
+    pkgs.efibootmgr
+    pkgs.util-linux
+    pkgs.coreutils
+    pkgs.gnused
+  ];
+in
 {
   imports = [
     ./hardware-configuration.nix
     ../modules/nixos/desktop.nix
     ../modules/nixos/services.nix
     ../modules/nixos/nvidia.nix
+    ../modules/nixos/first-boot.nix
   ];
 
   nix.settings = {
@@ -45,7 +59,9 @@
   # nvidia driver, Slack, Google Chrome, Claude Code, Notion, Obsidian
   nixpkgs.config.allowUnfree = true;
 
-  # Bootloader: GRUB on the ESP at /boot/efi, with os-prober for the Windows install on nvme0n1
+  # Bootloader: GRUB (UEFI) on the NixOS disk's own ESP, mounted at /boot/efi; kernels and grub.cfg stay in
+  # /boot on the root filesystem. The other disk (Artix, disks.nix `protected`) is never written to: its ESP
+  # keeps its own GRUB and UEFI entry, and the menu below only chainloads it.
   boot.loader = {
     efi = {
       canTouchEfiVariables = true;
@@ -53,12 +69,51 @@
     };
     grub = {
       enable = true;
-      device = "nodev";
       efiSupport = true;
-      useOSProber = true;
-      configurationLimit = 20; # keep the boot menu (and the ESP) tidy; older generations are still gc'd
+      device = "nodev";
+      # UEFI boot menu entry "NixOS" (\EFI\NixOS\grubx64.efi). The default id would be "NixOS-boot-efi",
+      # derived from efiSysMountPoint, and only mirroredBoots can change it, hence the override of the
+      # single mirroredBoots entry the module derives from `device`.
+      mirroredBoots = lib.mkForce [
+        {
+          path = "/boot";
+          devices = [ "nodev" ];
+          efiSysMountPoint = "/boot/efi";
+          efiBootloaderId = "NixOS";
+        }
+      ];
+      # os-prober would mount the other disk's partitions to look for systems; the fixed entry below finds
+      # Artix's GRUB by file instead (read-only, no mounting) and adds it exactly once
+      useOSProber = false;
+      extraEntries = ''
+        insmod part_gpt
+        insmod fat
+        insmod search
+        insmod chain
+        if search --no-floppy --file --set=artix_esp /EFI/artix/grubx64.efi; then
+          menuentry "Artix Linux" {
+            set root=$artix_esp
+            chainloader /EFI/artix/grubx64.efi
+          }
+        fi
+      '';
+      # grub-install registers "NixOS" in the firmware; drop stale or duplicate NixOS entries (never other
+      # systems' entries or anything on another disk)
+      extraInstallCommands = ''
+        PATH=${efiEntriesPath}:$PATH ${pkgs.bash}/bin/bash ${efiEntries} --esp-mount /boot/efi --label NixOS || true
+      '';
+      configurationLimit = 20; # keep the boot menu tidy; older generations are still gc'd
     };
   };
+
+  # The protected disks (Artix) are invisible to udisks: udiskie does not automount them at login and nemo
+  # does not list them. Mount one by hand if you need it: sudo mount -o ro /dev/disk/by-label/ROOT /mnt
+  services.udev.extraRules = lib.concatMapStrings (d: ''
+    SUBSYSTEM=="block", ENV{ID_SERIAL}=="*${d.serial}*", ENV{UDISKS_IGNORE}="1"
+  '') disks.protected;
+
+  # Intel AX200 Wi-Fi / Bluetooth firmware (hardware-configuration.nix is generated and does not set it)
+  hardware.enableRedistributableFirmware = true;
 
   # Compressed swap in RAM in front of the swap partition (20 GB RAM; zram gets the higher priority,
   # the disk swap stays as the fallback)
@@ -120,6 +175,7 @@
     vim
     pciutils
     usbutils
+    efibootmgr # inspect the UEFI boot entries (efibootmgr -v)
   ];
 
   # Lets binaries that were not built for NixOS run (Mason-installed language servers/debuggers in Neovim,

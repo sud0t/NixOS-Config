@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+# Keep exactly one UEFI boot entry for this NixOS install in the firmware boot menu.
+#
+#   nixos-efi-entries (--esp DEVICE | --esp-mount DIR) [--label NAME] [--dry-run]
+#
+# Run by install.sh before nixos-install and by the GRUB install hook (boot.loader.grub.extraInstallCommands)
+# after every bootloader install. Only entries that look like ours are considered: label starting with
+# "NixOS" (any case) or "Linux Boot Manager" (systemd-boot from an earlier install). Of those it deletes
+#   * entries pointing at a partition that no longer exists (left over from a wiped or repartitioned disk),
+#   * entries pointing at this ESP, except the first entry named exactly NAME (default NixOS) in BootOrder.
+# Entries pointing at an existing partition on any other disk, and entries of other systems (Artix, the
+# firmware's own NVMe0/USB entries, ...), are never touched.
+
+set -uo pipefail
+
+ESP_DEV=""
+ESP_MOUNT=""
+LABEL="NixOS"
+DRY_RUN=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+  --esp) ESP_DEV="${2:-}"; shift ;;
+  --esp-mount) ESP_MOUNT="${2:-}"; shift ;;
+  --label) LABEL="${2:-}"; shift ;;
+  --dry-run) DRY_RUN=1 ;;
+  -h | --help)
+    sed -n '2,/^$/p' "$0" | sed 's/^# \{0,1\}//'
+    exit 0
+    ;;
+  *) echo "nixos-efi-entries: unknown option $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+
+[ -d /sys/firmware/efi/efivars ] || { echo "nixos-efi-entries: not booted in UEFI mode, nothing to do"; exit 0; }
+command -v efibootmgr >/dev/null || { echo "nixos-efi-entries: efibootmgr not found" >&2; exit 1; }
+
+if [ -n "$ESP_MOUNT" ]; then
+  ESP_DEV="$(findmnt -no SOURCE --mountpoint "$ESP_MOUNT" 2>/dev/null)"
+fi
+[ -n "$ESP_DEV" ] && [ -b "$ESP_DEV" ] || { echo "nixos-efi-entries: ESP device not found (${ESP_DEV:-$ESP_MOUNT})" >&2; exit 1; }
+ESP_UUID="$(blkid -p -s PART_ENTRY_UUID -o value "$ESP_DEV" 2>/dev/null | tr 'A-F' 'a-f')"
+[ -n "$ESP_UUID" ] || { echo "nixos-efi-entries: no GPT partition UUID for $ESP_DEV" >&2; exit 1; }
+
+# a partition with this GPT UUID exists on some disk of this machine
+partition_exists() {
+  local uuid="$1" dev
+  [ -e "/dev/disk/by-partuuid/$uuid" ] && return 0
+  # /dev/disk/by-partuuid can be missing inside a chroot; ask every partition directly
+  for dev in /sys/class/block/*; do
+    [ -e "$dev/partition" ] || continue
+    [ "$(blkid -p -s PART_ENTRY_UUID -o value "/dev/${dev##*/}" 2>/dev/null | tr 'A-F' 'a-f')" = "$uuid" ] && return 0
+  done
+  return 1
+}
+
+order="$(efibootmgr | sed -n 's/^BootOrder: //p' | tr ',' ' ')"
+declare -A label_of=() uuid_of=()
+re='^Boot([0-9A-Fa-f]{4})\*?[[:space:]]+(.*[^[:space:]])[[:space:]]+HD\([0-9]+,GPT,([0-9A-Fa-f-]{36}),'
+while IFS= read -r line; do
+  [[ "$line" =~ $re ]] || continue
+  label_of[${BASH_REMATCH[1]^^}]="${BASH_REMATCH[2]}"
+  uuid_of[${BASH_REMATCH[1]^^}]="$(tr 'A-F' 'a-f' <<<"${BASH_REMATCH[3]}")"
+done < <(efibootmgr -v)
+
+# BootOrder first, then any entries not in it
+nums="$order"
+for n in "${!label_of[@]}"; do [[ " $order " == *" $n "* ]] || nums="$nums $n"; done
+
+kept=""
+for n in $nums; do
+  label="${label_of[$n]:-}"
+  [ -n "$label" ] || continue
+  shopt -s nocasematch
+  [[ "$label" == nixos* || "$label" == "Linux Boot Manager" ]] || { shopt -u nocasematch; continue; }
+  shopt -u nocasematch
+  uuid="${uuid_of[$n]}"
+  reason=""
+  if [ "$uuid" = "$ESP_UUID" ]; then
+    if [ -z "$kept" ] && [ "$label" = "$LABEL" ]; then
+      kept="$n"
+      echo "keeping   Boot$n \"$label\" (this ESP)"
+      continue
+    fi
+    reason="duplicate on this ESP"
+  elif ! partition_exists "$uuid"; then
+    reason="its partition no longer exists"
+  else
+    echo "skipping  Boot$n \"$label\" (points at another disk, left alone)"
+    continue
+  fi
+  if [ "$DRY_RUN" = 1 ]; then
+    echo "would remove Boot$n \"$label\" ($reason)"
+  elif efibootmgr -q -b "$n" -B; then
+    echo "removed   Boot$n \"$label\" ($reason)"
+  else
+    echo "failed to remove Boot$n \"$label\"" >&2
+  fi
+done
+exit 0
